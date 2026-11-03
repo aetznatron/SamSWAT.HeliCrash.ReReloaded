@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using Comfort.Common;
@@ -40,20 +41,28 @@ public class RaidLoadScreenPatch : ModulePatch
     [PatchPostfix]
     private static void PatchPostfix(ref Task __result)
     {
-        if (Singleton<GameWorld>.Instance is HideoutGameWorld)
+        try
         {
-            return;
-        }
+            if (Singleton<GameWorld>.Instance is HideoutGameWorld)
+            {
+                return;
+            }
 
-        if (s_configService.LoggingEnabled.Value)
+            if (s_configService.LoggingEnabled.Value)
+            {
+                s_logger.LogInfo("Creating HeliCrash RaidLifetimeScope...");
+            }
+
+            LifetimeScope scope = s_raidLifetimeScopeController.CreateScope();
+            scope.Build();
+
+            var spawner = (HeliCrashSpawner)scope.Container.Resolve(typeof(HeliCrashSpawner));
+            __result = spawner.StartAsync(__result).AsTask();
+        }
+        catch (Exception ex)
         {
-            s_logger.LogInfo("Creating HeliCrash RaidLifetimeScope...");
+            // a mod failure must not take the whole raid load down with it
+            s_logger.LogError($"HeliCrash could not start its raid scope: {ex}");
         }
-
-        LifetimeScope scope = s_raidLifetimeScopeController.CreateScope();
-        scope.Build();
-
-        var spawner = (HeliCrashSpawner)scope.Container.Resolve(typeof(HeliCrashSpawner));
-        __result = spawner.StartAsync(__result).AsTask();
     }
 }

@@ -7,6 +7,7 @@ using Cysharp.Threading.Tasks;
 using EFT;
 using EFT.Interactive;
 using EFT.InventoryLogic;
+using HarmonyLib;
 using JetBrains.Annotations;
 using SamSWAT.HeliCrash.ArysReloaded.Utils;
 using SPT.Reflection.Utils;
@@ -18,9 +19,7 @@ namespace SamSWAT.HeliCrash.ArysReloaded;
 public class LootContainerFactory(
     Logger logger,
     ConfigurationService configService,
-    LocalizationService localizationService,
-    ObjectsFactory objectsFactory,
-    ItemFactory itemFactory
+    LocalizationService localizationService
 )
 {
     /// <summary>
@@ -101,6 +100,15 @@ public class LootContainerFactory(
         CancellationToken cancellationToken
     )
     {
+        ObjectsFactory objectsFactory = GetObjectsFactory();
+        if (objectsFactory == null)
+        {
+            logger.LogWarning(
+                "ObjectsFactory not reachable on GameWorld - skipping bundle preload for the loot container"
+            );
+            return;
+        }
+
         await objectsFactory.LoadBundlesAndCreatePools(
             ObjectsFactory.PoolsCategory.Raid,
             ObjectsFactory.AssemblyType.Local,
@@ -109,6 +117,64 @@ public class LootContainerFactory(
             null,
             cancellationToken
         );
+    }
+
+    private static AccessTools.FieldRef<GameWorld, ObjectsFactory> s_objectsFactoryRef;
+    private static bool s_objectsFactoryLookupFailed;
+
+    /// <summary>
+    /// SPT 4.1 no longer exposes the object factory through <c>Singleton&lt;PoolManagerClass&gt;</c>
+    /// and does not register it in the mod's VContainer scope either; the live instance hangs
+    /// off <see cref="GameWorld"/> as a non-public field.
+    /// </summary>
+    private static ObjectsFactory GetObjectsFactory()
+    {
+        if (s_objectsFactoryLookupFailed)
+        {
+            return null;
+        }
+
+        try
+        {
+            s_objectsFactoryRef ??= AccessTools.FieldRefAccess<GameWorld, ObjectsFactory>("ObjectsFactory");
+            GameWorld gameWorld = Singleton<GameWorld>.Instance;
+            return gameWorld == null ? null : s_objectsFactoryRef(gameWorld);
+        }
+        catch (Exception)
+        {
+            s_objectsFactoryLookupFailed = true;
+            return null;
+        }
+    }
+
+    private static ItemFactory s_itemFactory;
+
+    /// <summary>
+    /// SPT 4.1 does not register <see cref="ItemFactory"/> in the mod's VContainer scope and the
+    /// game keeps it on classes we cannot reach, so build one from the live templates.
+    /// </summary>
+    private static ItemFactory GetItemFactory()
+    {
+        if (s_itemFactory != null)
+        {
+            return s_itemFactory;
+        }
+
+        try
+        {
+            ObjectsFactory objectsFactory = GetObjectsFactory();
+            if (objectsFactory == null)
+            {
+                return null;
+            }
+
+            s_itemFactory = new ItemFactory(objectsFactory._itemTemplates);
+            return s_itemFactory;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     private static ResourceKey[] GetResourceKeys(Item containerItem)
@@ -159,6 +225,14 @@ public class LootContainerFactory(
             {
                 return await UniTask.FromException<Item>(
                     new NullReferenceException("Heli crash loot response is null")
+                );
+            }
+
+            ItemFactory itemFactory = GetItemFactory();
+            if (itemFactory == null)
+            {
+                return await UniTask.FromException<Item>(
+                    new NullReferenceException("Heli crash: ItemFactory is not reachable")
                 );
             }
 
