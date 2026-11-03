@@ -108,7 +108,7 @@ public class LocalHeliCrashSpawner : HeliCrashSpawner
 
         GameWorld gameWorld = Singleton<GameWorld>.Instance;
 
-        if (gameWorld.World_0 != null)
+        if (gameWorld.World != null)
         {
             Door[] doors = choppa.GetComponentsInChildren<Door>();
 

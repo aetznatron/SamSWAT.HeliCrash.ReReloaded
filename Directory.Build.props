@@ -1,11 +1,11 @@
 <Project>
   <Import Project="SharedConfiguration/Shared.props" />
   <PropertyGroup>
-    <TargetSptVersion>4.0.3</TargetSptVersion>
+    <TargetSptVersion>4.1.6</TargetSptVersion>
     <Authors>Arys</Authors>
     <Copyright>Copyright © SamSWAT, Arys 2025</Copyright>
     <LangVersion>latest</LangVersion>
-    <Configurations>Debug;SPT-3.10 Release;SPT-3.11 Release;SPT-4.0 Release</Configurations>
+    <Configurations>Debug;SPT-3.10 Release;SPT-3.11 Release;SPT-4.0 Release;SPT-4.1 Release</Configurations>
     <SolutionName>SamSWAT.HeliCrash.ArysReloaded</SolutionName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -33,6 +33,12 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'SPT-4.0 Release' ">
     <OutputPath>Build\SPT-4.0\</OutputPath>
     <SptVersion>400x</SptVersion>
+    <Optimize>true</Optimize>
+    <NoWarn>1701;1702;0649</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'SPT-4.1 Release' ">
+    <OutputPath>Build\SPT-4.1\</OutputPath>
+    <SptVersion>410x</SptVersion>
     <Optimize>true</Optimize>
     <NoWarn>1701;1702;0649</NoWarn>
   </PropertyGroup>

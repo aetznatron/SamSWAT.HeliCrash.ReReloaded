@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using EFT;
 using HarmonyLib;
 using JetBrains.Annotations;
 using SamSWAT.HeliCrash.ArysReloaded.Utils;
@@ -28,15 +29,20 @@ public class GetLocalePatch : ModulePatch
 
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(LocaleClass), nameof(LocaleClass.ReloadBackendLocale));
+        return AccessTools.Method(typeof(DataPrepareOperation), "ReloadBackendLocale");
     }
 
     [PatchPostfix]
-    private static async void PatchPostfix(string locale, Task __result)
+    private static async void PatchPostfix(object[] __args, Task __result)
     {
         try
         {
-            s_localizationService.LoadLocale(locale);
+            // ReloadBackendLocale(IClientBackEnd<IEftSession>, IClientSession, string locale)
+            var locale = __args.Length > 2 ? __args[2] as string : null;
+            if (!string.IsNullOrEmpty(locale))
+            {
+                s_localizationService.LoadLocale(locale);
+            }
             s_configService.InitializeBindings();
 
             await __result;
@@ -44,7 +50,7 @@ public class GetLocalePatch : ModulePatch
         catch (Exception ex)
         {
             s_logger.LogError(
-                $"Error patching {nameof(LocaleClass.ReloadBackendLocale)}: {ex.Message}\n{ex.StackTrace})"
+                $"Error patching ReloadBackendLocale: {ex.Message}\n{ex.StackTrace})"
             );
         }
     }

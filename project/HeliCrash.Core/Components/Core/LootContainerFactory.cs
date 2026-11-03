@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Comfort.Common;
+using Diz.Jobs;
 using Cysharp.Threading.Tasks;
 using EFT;
 using EFT.Interactive;
@@ -17,7 +18,9 @@ namespace SamSWAT.HeliCrash.ArysReloaded;
 public class LootContainerFactory(
     Logger logger,
     ConfigurationService configService,
-    LocalizationService localizationService
+    LocalizationService localizationService,
+    ObjectsFactory objectsFactory,
+    ItemFactory itemFactory
 )
 {
     /// <summary>
@@ -51,7 +54,7 @@ public class LootContainerFactory(
 
             GameWorld gameWorld = Singleton<GameWorld>.Instance;
 
-            if (gameWorld.World_0 != null)
+            if (gameWorld.World != null)
             {
                 gameWorld.RegisterWorldInteractionObject(container);
             }
@@ -93,17 +96,18 @@ public class LootContainerFactory(
         }
     }
 
-    private static async UniTask LoadItemBundles(
+    private async UniTask LoadItemBundles(
         ResourceKey[] resourceKeys,
         CancellationToken cancellationToken
     )
     {
-        await Singleton<PoolManagerClass>.Instance.LoadBundlesAndCreatePools(
-            PoolManagerClass.PoolsCategory.Raid,
-            PoolManagerClass.AssemblyType.Local,
+        await objectsFactory.LoadBundlesAndCreatePools(
+            ObjectsFactory.PoolsCategory.Raid,
+            ObjectsFactory.AssemblyType.Local,
             resourceKeys,
-            JobPriorityClass.Immediate,
-            ct: cancellationToken
+            JobYieldPriority.Immediate,
+            null,
+            cancellationToken
         );
     }
 
@@ -139,10 +143,8 @@ public class LootContainerFactory(
 
             AirdropLootResponse lootResponse = (
                 await (
-                    (ProfileEndpointFactoryAbstractClass)
-                        ClientAppUtils.GetClientApp().GetClientBackEndSession()
-                )
-                    .LoadLootContainerData(null)
+                    (ClientBackendSession)ClientAppUtils.GetClientApp().GetClientBackEndSession()
+                ).LoadLootContainerData(null)
                     .AsUniTask()
                     .Timeout(
                         TimeSpan.FromSeconds(10),
@@ -160,8 +162,8 @@ public class LootContainerFactory(
                 );
             }
 
-            Item containerItem = Singleton<ItemFactoryClass>
-                .Instance.FlatItemsToTree(lootResponse.data)
+            Item containerItem = itemFactory
+                .FlatItemsToTree(lootResponse.data, false, null)
                 .Items[lootResponse.data[0]._id];
 
             if (configService.LoggingEnabled.Value)
