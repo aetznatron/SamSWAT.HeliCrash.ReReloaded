@@ -1,5 +1,11 @@
 # HelicopterCrashSites
 
+> **SPT 4.1.x port** — this fork is maintained by **aetznatron** and ports Helicopter Crash Sites to SPT 4.1.x
+> (client 0.16.9.x). Original by **SamSWAT / ArysWasTaken** ([ArysWasTaken/SamSWAT.HeliCrash.ArysReloaded](https://github.com/ArysWasTaken/SamSWAT.HeliCrash.ArysReloaded)).
+>
+> Building and installing the ported version: see [BUILDING.md](BUILDING.md) and `build-spt.ps1`.
+> Build notes further down are upstream text and may be outdated.
+
 DayZ inspired
 
 ## Overview
